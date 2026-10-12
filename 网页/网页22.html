@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>概念讲解 · 信号检测论</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#f7f9fb;
+  --surface:#ffffff;
+  --surface-2:#f0f4f8;
+  --border:#dde5ee;
+  --border-2:#c4d3e0;
+  --ink:#1c2b3a;
+  --ink-2:#4a6278;
+  --muted:#8899aa;
+  --accent:#2c6e8a;
+  --accent-l:#e4f0f5;
+  --accent-m:#8ec4d6;
+  --hit:#1a8a6e;
+  --fa:#c47a1a;
+  --miss:#c44a4a;
+  --cr:#3a6ea8;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* ============ 顶部导航 ============ */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 28px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand .mark{
+  width:10px;height:10px;border-radius:3px;
+  background:var(--accent);flex:none;
+}
+.brand h1{font-size:14.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;color:var(--ink)}
+.brand .sub{
+  display:block;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.16em;color:var(--muted);margin-top:-2px;
+}
+.topbar nav{display:flex;gap:6px;flex-wrap:wrap}
+.navbtn{
+  padding:7px 18px;border-radius:9px;border:1px solid transparent;
+  background:transparent;color:var(--ink-2);
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.16s;
+  text-decoration:none;
+}
+.navbtn:hover{background:var(--accent-l);color:var(--accent)}
+.navbtn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ============ 视图 ============ */
+.view{display:none;max-width:960px;margin:0 auto;padding:34px 28px 80px}
+.view.active{display:block;animation:fade .28s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:640px){
+  .topbar{padding:11px 16px}
+  .brand h1{font-size:13px}
+  .view{padding:22px 16px 64px}
+}
+
+/* ============ 顶部进度指示 ============ */
+.progress-bar{
+  display:flex;gap:8px;margin-bottom:30px;
+  padding:14px 18px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  flex-wrap:wrap;
+}
+.progress-step{
+  flex:1;display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--muted);font-weight:600;
+  padding:6px 10px;border-radius:7px;transition:.2s;
+  min-width:100px;
+}
+.progress-step .dot{
+  width:20px;height:20px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;font-family:var(--mono);
+  background:var(--surface-2);color:var(--muted);
+  border:1.5px solid var(--border-2);
+}
+.progress-step.on{color:var(--accent)}
+.progress-step.on .dot{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ============ 卡片 ============ */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:28px;
+  margin-bottom:18px;
+}
+.card h2{
+  font-size:20px;font-weight:800;letter-spacing:-.01em;
+  margin-bottom:16px;color:var(--ink);
+  display:flex;align-items:center;gap:10px;
+}
+.card h2 .num{
+  font-family:var(--mono);font-size:13px;font-weight:700;
+  color:var(--accent);background:var(--accent-l);
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex:none;
+}
+.card h3{
+  font-size:14px;font-weight:700;color:var(--accent);
+  letter-spacing:.05em;margin-bottom:12px;margin-top:22px;
+  text-transform:uppercase;
+}
+.card h3:first-child{margin-top:0}
+.card p{font-size:14.5px;color:var(--ink-2);margin-bottom:12px;line-height:1.78}
+.card p:last-child{margin-bottom:0}
+.card strong{color:var(--ink);font-weight:700}
+
+/* ============ 故事块 ============ */
+.story{
+  background:var(--surface-2);
+  border-left:3px solid var(--accent-m);
+  border-radius:0 12px 12px 0;
+  padding:20px 22px;
+  margin:18px 0;
+  font-size:14.5px;color:var(--ink-2);line-height:1.8;
+}
+.story .label{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;
+  color:var(--accent);letter-spacing:.14em;margin-bottom:8px;
+}
+
+/* ============ 混淆矩阵 ============ */
+.matrix-wrap{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;margin:20px 0}
+.matrix-corner{width:90px}
+.matrix-head{
+  text-align:center;font-size:12px;font-weight:700;color:var(--muted);
+  padding:8px 6px;letter-spacing:.04em;
+}
+.matrix-head.top{color:var(--ink-2)}
+.matrix-row-label{
+  display:flex;align-items:center;justify-content:flex-end;
+  padding-right:12px;font-size:12px;font-weight:700;color:var(--muted);
+  text-align:right;
+}
+.matrix-cell{
+  border-radius:10px;padding:18px 10px;text-align:center;
+  border:1px solid var(--border);cursor:pointer;transition:.18s;
+  position:relative;
+}
+.matrix-cell:hover{transform:scale(1.02)}
+.matrix-cell .sym{
+  font-family:var(--mono);font-size:13px;font-weight:700;
+  margin-bottom:4px;
+}
+.matrix-cell .term{font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.matrix-cell .desc{font-size:10.5px;color:var(--muted);margin-top:3px}
+.matrix-cell.hit{background:rgba(26,138,110,.07);border-color:rgba(26,138,110,.25)}
+.matrix-cell.hit .sym{color:var(--hit)}
+.matrix-cell.fa{background:rgba(196,122,26,.07);border-color:rgba(196,122,26,.25)}
+.matrix-cell.fa .sym{color:var(--fa)}
+.matrix-cell.miss{background:rgba(196,74,74,.07);border-color:rgba(196,74,74,.25)}
+.matrix-cell.miss .sym{color:var(--miss)}
+.matrix-cell.cr{background:rgba(58,110,168,.07);border-color:rgba(58,110,168,.25)}
+.matrix-cell.cr .sym{color:var(--cr)}
+.matrix-cell.selected{box-shadow:0 0 0 2.5px var(--accent);}
+
+/* ============ 交互控件 ============ */
+.control-panel{
+  background:var(--surface-2);
+  border-radius:12px;
+  padding:20px 22px;
+  margin:18px 0;
+}
+.control-row{margin-bottom:18px}
+.control-row:last-child{margin-bottom:0}
+.control-label{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:8px;
+}
+.control-label .value{
+  font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent);
+}
+input[type=range]{
+  width:100%;height:5px;-webkit-appearance:none;appearance:none;
+  background:var(--accent-l);border-radius:99px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--accent);border:3px solid #fff;
+  box-shadow:0 0 0 1px var(--accent-m);cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:14px;height:14px;border-radius:50%;background:var(--accent);
+  border:3px solid #fff;box-shadow:0 0 0 1px var(--accent-m);cursor:pointer;
+}
+
+/* ============ 图表 ============ */
+.chart-box{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  margin:16px 0;
+}
+.chart-box canvas{display:block;width:100%;height:auto}
+
+/* ============ 实时反馈卡 ============ */
+.feedback-panel{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  gap:10px;margin:16px 0;
+}
+@media(max-width:640px){.feedback-panel{grid-template-columns:1fr}}
+.fb-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 12px;text-align:center;
+}
+.fb-card .fb-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.fb-card .fb-value{
+  font-family:var(--mono);font-size:22px;font-weight:700;
+  color:var(--accent);margin-top:4px;
+}
+.fb-card .fb-hint{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ============ 关键洞察 ============ */
+.insight{
+  background:var(--accent-l);
+  border-radius:12px;
+  padding:18px 22px;
+  margin:18px 0;
+  font-size:14px;color:var(--ink-2);line-height:1.78;
+}
+.insight .label{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;
+  color:var(--accent);letter-spacing:.14em;margin-bottom:6px;
+}
+.insight strong{color:var(--accent);font-weight:700}
+
+/* ============ 按钮 ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 26px;border-radius:10px;
+  font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;transition:.16s;
+  background:var(--surface);color:var(--ink);border:1px solid var(--border-2);
+  text-decoration:none;
+}
+.btn:hover{background:var(--accent-l);border-color:var(--accent-m);color:var(--accent)}
+.btn.primary{
+  background:var(--accent);color:#fff;border-color:var(--accent);
+}
+.btn.primary:hover{background:#245d75;border-color:#245d75;color:#fff}
+
+/* ============ 导航按钮组 ============ */
+.nav-actions{
+  display:flex;gap:12px;flex-wrap:wrap;margin-top:28px;
+}
+.nav-actions .btn{flex:1;min-width:140px}
+
+/* ============ 术语表 ============ */
+.term-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+@media(max-width:640px){.term-grid{grid-template-columns:1fr}}
+.term-item{
+  background:var(--surface-2);border-radius:10px;padding:16px 18px;
+}
+.term-item .term-name{
+  font-family:var(--mono);font-size:13px;font-weight:700;
+  color:var(--accent);margin-bottom:6px;
+}
+.term-item .term-def{font-size:13px;color:var(--ink-2);line-height:1.65}
+
+/* ============ 底部提示 ============ */
+.footer-note{
+  text-align:center;padding:24px;
+  font-size:12px;color:var(--muted);
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark"></span>
+    <div>
+      <h1>概念讲解</h1>
+      <span class="sub">SIGNAL DETECTION THEORY</span>
+    </div>
+  </div>
+  <nav>
+    <button class="navbtn active" data-view="chapter1">四种结果</button>
+    <button class="navbtn" data-view="chapter2">辨别力 d′</button>
+    <button class="navbtn" data-view="chapter3">判断标准 c</button>
+    <button class="navbtn" data-view="chapter4">先验与奖惩</button>
+    <button class="navbtn" onclick="window.location.href='file:///C:/Users/22628/Desktop/网页/网页.html'">返回实验界面</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ================= 四种结果 ================= -->
+  <section class="view active" id="view-chapter1">
+
+    <div class="progress-bar">
+      <div class="progress-step on"><span class="dot">1</span> 四种结果</div>
+      <div class="progress-step"><span class="dot">2</span> 辨别力 d′</div>
+      <div class="progress-step"><span class="dot">3</span> 判断标准 c</div>
+      <div class="progress-step"><span class="dot">4</span> 先验与奖惩</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">01</span>先从一个日常场景说起</h2>
+
+      <div class="story">
+        <div class="label">场景</div>
+        你正在开车。收音机开着，路面有噪音。突然，你好像听到引擎传来一声轻微的异响——<strong>“咔嗒”</strong>。
+        你的车很旧，以前也出过毛病。那么问题是：<strong>你听到的到底是真的异响，还是只是路噪和收音机里的声音让你产生了错觉？</strong>
+      </div>
+
+      <p>
+        这个场景里其实包含了两层不确定性：
+      </p>
+      <p>
+        <strong>第一层：世界上到底有没有异响？</strong>引擎可能真的发出了异响（信号存在），也可能一切正常（只有噪音）。<br>
+        <strong>第二层：你的判断是什么？</strong>你可以决定“我听到了异响”，也可以决定“那是错觉，没有异响”。
+      </p>
+      <p>
+        两层组合起来，就是<strong>四种可能的结果</strong>。点击下面的格子，了解每一种的含义。
+      </p>
+
+      <div class="matrix-wrap" id="matrixWrap">
+        <div class="matrix-corner"></div>
+        <div class="matrix-head top">引擎真的响了</div>
+        <div class="matrix-head top">引擎其实没响</div>
+
+        <div class="matrix-row-label">你说“有异响”</div>
+        <div class="matrix-cell hit" data-term="hit">
+          <div class="sym">H</div>
+          <div class="term">击中</div>
+          <div class="desc">正确发现</div>
+        </div>
+        <div class="matrix-cell fa" data-term="fa">
+          <div class="sym">FA</div>
+          <div class="term">误报</div>
+          <div class="desc">虚惊一场</div>
+        </div>
+
+        <div class="matrix-row-label">你说“没事”</div>
+        <div class="matrix-cell miss" data-term="miss">
+          <div class="sym">M</div>
+          <div class="term">漏报</div>
+          <div class="desc">错过了真问题</div>
+        </div>
+        <div class="matrix-cell cr" data-term="cr">
+          <div class="sym">CR</div>
+          <div class="term">正确拒斥</div>
+          <div class="desc">正确判断没事</div>
+        </div>
+      </div>
+
+      <div class="insight" id="termInsight">
+        <div class="label">点击上方任意格子</div>
+        每个格子代表一种结果。注意：<strong>正确</strong>的格子（击中、正确拒斥）和<strong>错误</strong>的格子（误报、漏报）各有两个，
+        但它们错误的“代价”完全不同——漏报可能让你在半路抛锚，误报只是多跑一趟修理厂。
+      </div>
+
+      <p>
+        信号检测论最核心的洞察就是：<strong>你不可能同时消灭误报和漏报。</strong>
+        你只能选择把判断的门槛设在哪里。门槛设得高，漏报多、误报少；门槛设得低，误报多、漏报少。
+      </p>
+    </div>
+
+    <div class="nav-actions">
+      <button class="btn primary" onclick="go('chapter2')">下一章：辨别力 d′ →</button>
+    </div>
+  </section>
+
+  <!-- ================= 辨别力 d′ ================= -->
+  <section class="view" id="view-chapter2">
+
+    <div class="progress-bar">
+      <div class="progress-step"><span class="dot">1</span> 四种结果</div>
+      <div class="progress-step on"><span class="dot">2</span> 辨别力 d′</div>
+      <div class="progress-step"><span class="dot">3</span> 判断标准 c</div>
+      <div class="progress-step"><span class="dot">4</span> 先验与奖惩</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">02</span>“你能不能分得清？”——辨别力 d′</h2>
+
+      <p>
+        上面说的“门槛”问题，前提是<strong>你能感受到差异</strong>。
+        如果引擎的异响和路噪在你听起来<strong>完全一样</strong>，那无论门槛设在哪里都没用。
+      </p>
+      <p>
+        信号检测论用两个正态分布来刻画这个“感受”：
+      </p>
+
+      <div class="term-grid">
+        <div class="term-item">
+          <div class="term-name">噪音分布 N(0, 1)</div>
+          <div class="term-def">只有背景噪音时，你感受到的“异响强度”波动。大多集中在 0 附近，偶尔也会偏大——这就是为什么你有时会在完全正常的车里“听到”异响。</div>
+        </div>
+        <div class="term-item">
+          <div class="term-name">信号分布 N(d′, 1)</div>
+          <div class="term-def">真的存在信号（异响）时，你感受到的强度波动。它的平均值比噪音分布高出 <strong>d′</strong>。两个分布重叠得越少，越容易分辨。</div>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="control-row">
+          <div class="control-label">
+            <span>辨别力 d′</span>
+            <span class="value" id="c2DpVal">1.50</span>
+          </div>
+          <input type="range" id="c2Dp" min="0.2" max="4" step="0.1" value="1.5">
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <canvas id="c2Chart" width="880" height="340"></canvas>
+      </div>
+
+      <div class="insight" id="c2Insight">
+        <div class="label">观察</div>
+        拖动滑块，看两个分布如何分离。d′ 越大，分布越分开，你越不容易把噪音误认成信号。
+      </div>
+
+      <p>
+        注意：分布<strong>本身</strong>并没有移动到你“想要”的位置。你感受到的波动是<strong>被动发生</strong>的——
+        d′ 决定了你的感官系统能把信号从噪音中区分出来的<strong>物理极限</strong>。
+      </p>
+      <p>
+        换句话说，d′ 回答的是：<strong>“如果我想分清楚，我有没有这个能力？”</strong>
+        而不是“我愿意分多清楚”。
+      </p>
+    </div>
+
+    <div class="nav-actions">
+      <button class="btn" onclick="go('chapter1')">← 上一章</button>
+      <button class="btn primary" onclick="go('chapter3')">下一章：判断标准 c →</button>
+    </div>
+  </section>
+
+  <!-- ================= 判断标准 c ================= -->
+  <section class="view" id="view-chapter3">
+
+    <div class="progress-bar">
+      <div class="progress-step"><span class="dot">1</span> 四种结果</div>
+      <div class="progress-step"><span class="dot">2</span> 辨别力 d′</div>
+      <div class="progress-step on"><span class="dot">3</span> 判断标准 c</div>
+      <div class="progress-step"><span class="dot">4</span> 先验与奖惩</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">03</span>“你敢不敢说有？”——判断标准 c</h2>
+
+      <p>
+        假设 d′ 已经固定了——你的耳朵就是那么灵，或者就是那么不灵。现在轮到<strong>你</strong>来做决定了。
+      </p>
+      <p>
+        你需要在感觉轴上划一条线：<strong>“感觉强度超过这条线，我就说有异响；没超过，我就说没有。”</strong>
+        这条线就是<strong>判断标准</strong>，通常用 <strong>c</strong> 表示。
+      </p>
+
+      <div class="control-panel">
+        <div class="control-row">
+          <div class="control-label">
+            <span>辨别力 d′（固定为 1.5）</span>
+            <span class="value">1.50</span>
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-label">
+            <span>判断标准 c</span>
+            <span class="value" id="c3CVal">0.00</span>
+          </div>
+          <input type="range" id="c3C" min="-2" max="2" step="0.05" value="0">
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <canvas id="c3Chart" width="880" height="340"></canvas>
+      </div>
+
+      <div class="feedback-panel">
+        <div class="fb-card">
+          <div class="fb-label">P(H) 击中率</div>
+          <div class="fb-value" id="c3PH">0.50</div>
+          <div class="fb-hint">有信号时你说“有”</div>
+        </div>
+        <div class="fb-card">
+          <div class="fb-label">P(FA) 误报率</div>
+          <div class="fb-value" id="c3PFA">0.50</div>
+          <div class="fb-hint">无信号时你说“有”</div>
+        </div>
+        <div class="fb-card">
+          <div class="fb-label">c 值</div>
+          <div class="fb-value" id="c3CFb">0.00</div>
+          <div class="fb-hint">正=保守，负=宽松</div>
+        </div>
+      </div>
+
+      <div class="insight" id="c3Insight">
+        <div class="label">试试看</div>
+        把 c 拖到 <strong>+1.0</strong> 附近：击中率和误报率同时下降。再把 c 拖到 <strong>−1.0</strong>：两者同时上升。
+        注意：<strong>d′ 始终是 1.5，没有变</strong>。你改变的只是“敢不敢说有”，不是“能不能分清”。
+      </div>
+
+      <p>
+        这就是信号检测论最关键的一步：<strong>把“能力”和“策略”分开。</strong>
+        在传统的“准确率”框架下，你无法区分“谨慎的人”和“能力差的人”——
+        他们的准确率可能一样，但 d′ 和 c 完全不同。
+      </p>
+    </div>
+
+    <div class="nav-actions">
+      <button class="btn" onclick="go('chapter2')">← 上一章</button>
+      <button class="btn primary" onclick="go('chapter4')">下一章：先验与奖惩 →</button>
+    </div>
+  </section>
+
+  <!-- ================= 先验与奖惩 ================= -->
+  <section class="view" id="view-chapter4">
+
+    <div class="progress-bar">
+      <div class="progress-step"><span class="dot">1</span> 四种结果</div>
+      <div class="progress-step"><span class="dot">2</span> 辨别力 d′</div>
+      <div class="progress-step"><span class="dot">3</span> 判断标准 c</div>
+      <div class="progress-step on"><span class="dot">4</span> 先验与奖惩</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">04</span>什么决定了你的 c？</h2>
+
+      <p>
+        你不会凭空选择判断标准。两个因素在背后推动你：
+      </p>
+
+      <h3>因素一：信号出现的先验概率</h3>
+      <p>
+        如果你知道这条路上有 90% 的概率会有异响（比如这条路以路面颠簸出名），
+        你会更倾向于说“有”。相反，如果这条路你天天走、从来没事，你会更倾向于说“没有”。
+      </p>
+
+      <div class="control-panel">
+        <div class="control-row">
+          <div class="control-label">
+            <span>P(S) 信号先验概率</span>
+            <span class="value" id="c4PriorVal">0.50</span>
+          </div>
+          <input type="range" id="c4Prior" min="0.05" max="0.95" step="0.01" value="0.5">
+        </div>
+      </div>
+
+      <div class="feedback-panel">
+        <div class="fb-card">
+          <div class="fb-label">P(S)</div>
+          <div class="fb-value" id="c4PS">0.50</div>
+          <div class="fb-hint">信号出现的概率</div>
+        </div>
+        <div class="fb-card">
+          <div class="fb-label">最优 β（仅先验）</div>
+          <div class="fb-value" id="c4Beta">1.00</div>
+          <div class="fb-hint">P(N)/P(S)</div>
+        </div>
+        <div class="fb-card">
+          <div class="fb-label">对应最优 c</div>
+          <div class="fb-value" id="c4Copt">0.00</div>
+          <div class="fb-hint">ln(β)/d′</div>
+        </div>
+      </div>
+
+      <h3>因素二：每种结果的代价与收益</h3>
+      <p>
+        漏报和误报的“代价”往往完全不同。漏报一次引擎异响可能让你抛锚在高速上，
+        误报一次只是多跑一趟修理厂。这种不对称会强烈地改变你的判断标准。
+      </p>
+
+      <div class="term-grid">
+        <div class="term-item">
+          <div class="term-name">漏报代价高 → c 偏低</div>
+          <div class="term-def">宁可误报，也不能漏报。你把门槛放低，稍有风吹草动就说“有”。</div>
+        </div>
+        <div class="term-item">
+          <div class="term-name">误报代价高 → c 偏高</div>
+          <div class="term-def">只有在证据确凿时才说“有”。你非常保守，容忍漏报，换取极低的误报。</div>
+        </div>
+      </div>
+
+      <div class="control-panel">
+        <div class="control-row">
+          <div class="control-label">
+            <span>V(H) 击中收益</span>
+            <span class="value" id="c4VHVal">10</span>
+          </div>
+          <input type="range" id="c4VH" min="0" max="20" step="1" value="10">
+        </div>
+        <div class="control-row">
+          <div class="control-label">
+            <span>C(M) 漏报代价（绝对值越大越严重）</span>
+            <span class="value" id="c4CMVal">8</span>
+          </div>
+          <input type="range" id="c4CM" min="0" max="20" step="1" value="8">
+        </div>
+        <div class="control-row">
+          <div class="control-label">
+            <span>C(FA) 误报代价</span>
+            <span class="value" id="c4CFAVal">2</span>
+          </div>
+          <input type="range" id="c4CFA" min="0" max="20" step="1" value="2">
+        </div>
+        <div class="control-row">
+          <div class="control-label">
+            <span>V(CR) 正确拒斥收益</span>
+            <span class="value" id="c4VCRVal">5</span>
+          </div>
+          <input type="range" id="c4VCR" min="0" max="20" step="1" value="5">
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <canvas id="c4Chart" width="880" height="280"></canvas>
+      </div>
+
+      <div class="feedback-panel">
+        <div class="fb-card">
+          <div class="fb-label">最优 β（含奖惩）</div>
+          <div class="fb-value" id="c4BetaFull">1.00</div>
+          <div class="fb-hint">综合考虑所有因素</div>
+        </div>
+        <div class="fb-card">
+          <div class="fb-label">最优 c</div>
+          <div class="fb-value" id="c4CFull">0.00</div>
+          <div class="fb-hint">你“应该”设在哪</div>
+        </div>
+        <div class="fb-card">
+          <div class="fb-label">方向</div>
+          <div class="fb-value" id="c4Dir" style="font-size:14px">中性</div>
+          <div class="fb-hint">偏保守 / 偏宽松</div>
+        </div>
+      </div>
+
+      <div class="insight">
+        <div class="label">工程心理学的核心</div>
+        现实中的检测者——雷达操作员、安检员、医生——并不是“尽量准确”就行。
+        他们的 c 会被<strong>先验概率、奖惩结构、组织文化、甚至一句“宁可错杀不可放过”</strong>所塑造。
+        信号检测论的价值就在于：<strong>它能把“这个人能力如何”和“这个人被要求怎么做”分开测量。</strong>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <button class="btn" onclick="go('chapter3')">← 上一章</button>
+      <button class="btn primary" onclick="go('chapter1')">回到第一章重新理解 →</button>
+    </div>
+  </section>
+
+</main>
+
+<div class="footer-note">
+  信号检测论 · 概念讲解 · 工程心理学
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ========== 统计工具 ========== */
+function ncdf(x){
+  var t=1/(1+0.2316419*Math.abs(x));
+  var d=0.3989422804014327*Math.exp(-x*x/2);
+  var p=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
+  return x>0?1-p:p;
+}
+function invN(p){
+  if(p<=0)return -4.6;if(p>=1)return 4.6;
+  var a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,
+          1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  var b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,
+          6.680131188771972e+01,-1.328068155288572e+01];
+  var c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,
+         -2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  var d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  var pl=0.02425,ph=1-pl,q,r;
+  if(p<pl){q=Math.sqrt(-2*Math.log(p));return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+  else if(p<=ph){q=p-0.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);}
+  else{q=Math.sqrt(-2*Math.log(1-p));return-(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+}
+function npdf(x,m,s){return(1/(s*Math.sqrt(2*Math.PI)))*Math.exp(-0.5*((x-m)/s)**2);}
+
+function setupCanvas(cv,w,h){
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  cv.style.width='100%';cv.style.height='auto';
+  var g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);
+  return{ctx:g,W:w,H:h};
+}
+
+var $=function(id){return document.getElementById(id);};
+var charts={};
+
+/* ========== 视图切换 ========== */
+function go(name){
+  document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('active',v.id==='view-'+name);});
+  document.querySelectorAll('.navbtn').forEach(function(b){b.classList.toggle('active',b.dataset.view===name);});
+  window.scrollTo(0,0);
+  setTimeout(function(){
+    Object.values(charts).forEach(function(c){if(c.resize)c.resize();});
+    if(name==='chapter2')drawC2();
+    if(name==='chapter3')drawC3();
+    if(name==='chapter4'){drawC4Dist();drawC4Chart();}
+  },60);
+}
+window.go=go;
+
+/* ========== 第一章：矩阵交互 ========== */
+var termTexts={
+  hit:'<div class="label">击中 HIT</div>信号真的存在，你也正确地说“有”。这是你最希望得到的结果。在雷达场景中，就是成功发现了敌机。',
+  fa:'<div class="label">误报 FALSE ALARM</div>信号不存在，但你说“有”。雷达屏幕上的一次杂波被误认为敌机，或者你把路噪当成了引擎异响。',
+  miss:'<div class="label">漏报 MISS</div>信号确实存在，但你说“没有”。这是最危险的错误——漏掉一次真实的威胁，可能造成严重后果。',
+  cr:'<div class="label">正确拒斥 CORRECT REJECTION</div>信号不存在，你也正确地说“没有”。一切正常，你做出了正确的判断。'
+};
+document.querySelectorAll('.matrix-cell').forEach(function(cell){
+  cell.addEventListener('click',function(){
+    document.querySelectorAll('.matrix-cell').forEach(function(c){c.classList.remove('selected');});
+    this.classList.add('selected');
+    var key=this.dataset.term;
+    $('termInsight').innerHTML=termTexts[key];
+  });
+});
+
+/* ========== 第二章：d' 分布图 ========== */
+var c2Dp=1.5;
+
+function drawC2(){
+  var v=setupCanvas($('c2Chart'),880,340);
+  var ctx=v.ctx,W=v.W,H=v.H;
+  var pad={l:60,r:30,t:30,b:50};
+  var pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  var xMin=-4,xMax=4+c2Dp;
+
+  function X(x){return pad.l+(x-xMin)/(xMax-xMin)*pw;}
+  function Y(y){return pad.t+ph-(y/0.45)*ph;}
+
+  ctx.clearRect(0,0,W,H);
+
+  // 网格
+  ctx.strokeStyle='#eef3f7';ctx.lineWidth=1;
+  for(var i=1;i<10;i++){var gx=Math.round(X(xMin+(xMax-xMin)*i/10))+.5;ctx.beginPath();ctx.moveTo(gx,pad.t);ctx.lineTo(gx,pad.t+ph);ctx.stroke();}
+  for(var j=1;j<5;j++){var gy=Math.round(pad.t+ph*j/5)+.5;ctx.beginPath();ctx.moveTo(pad.l,gy);ctx.lineTo(pad.l+pw,gy);ctx.stroke();}
+
+  // 噪音分布填充
+  ctx.beginPath();ctx.moveTo(X(xMin),Y(0));
+  for(var x=xMin;x<=xMax;x+=0.05){ctx.lineTo(X(x),Y(npdf(x,0,1)));}
+  ctx.lineTo(X(xMax),Y(0));ctx.closePath();
+  ctx.fillStyle='rgba(58,110,168,.10)';ctx.fill();
+
+  // 信号分布填充
+  ctx.beginPath();ctx.moveTo(X(xMin),Y(0));
+  for(var x=xMin;x<=xMax;x+=0.05){ctx.lineTo(X(x),Y(npdf(x,c2Dp,1)));}
+  ctx.lineTo(X(xMax),Y(0));ctx.closePath();
+  ctx.fillStyle='rgba(26,138,110,.10)';ctx.fill();
+
+  // 噪音曲线
+  ctx.beginPath();
+  for(var x=xMin;x<=xMax;x+=0.05){var px=X(x),py=Y(npdf(x,0,1));if(x===xMin)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.strokeStyle='#3a6ea8';ctx.lineWidth=2.2;ctx.stroke();
+
+  // 信号曲线
+  ctx.beginPath();
+  for(var x=xMin;x<=xMax;x+=0.05){var px=X(x),py=Y(npdf(x,c2Dp,1));if(x===xMin)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.strokeStyle='#1a8a6e';ctx.lineWidth=2.2;ctx.stroke();
+
+  // 均值虚线
+  ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(58,110,168,.4)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(X(0),pad.t);ctx.lineTo(X(0),pad.t+ph);ctx.stroke();
+  ctx.strokeStyle='rgba(26,138,110,.4)';
+  ctx.beginPath();ctx.moveTo(X(c2Dp),pad.t);ctx.lineTo(X(c2Dp),pad.t+ph);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // d' 标注箭头
+  var yArrow=pad.t+ph-30;
+  ctx.strokeStyle='#2c6e8a';ctx.lineWidth=1.8;
+  ctx.beginPath();ctx.moveTo(X(0),yArrow);ctx.lineTo(X(c2Dp),yArrow);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(X(c2Dp),yArrow);ctx.lineTo(X(c2Dp)-6,yArrow-5);ctx.lineTo(X(c2Dp)-6,yArrow+5);ctx.closePath();ctx.fillStyle='#2c6e8a';ctx.fill();
+
+  // d' 文字
+  ctx.fillStyle='#2c6e8a';ctx.font='700 13px ui-monospace,monospace';ctx.textAlign='center';
+  ctx.fillText("d′ = "+c2Dp.toFixed(1),X(c2Dp/2),yArrow-10);
+
+  // 坐标轴
+  ctx.strokeStyle='#c4d3e0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ph);ctx.lineTo(pad.l+pw,pad.t+ph);ctx.stroke();
+
+  // 轴标题
+  ctx.fillStyle='#8899aa';ctx.font='12px ui-monospace,monospace';ctx.textAlign='center';
+  ctx.fillText('感觉强度 →',pad.l+pw/2,H-16);
+
+  // 图例
+  ctx.textAlign='left';ctx.font='600 12px -apple-system,sans-serif';
+  ctx.fillStyle='#3a6ea8';ctx.fillText('■ 噪音 N',pad.l+10,pad.t+18);
+  ctx.fillStyle='#1a8a6e';ctx.fillText('■ 信号 SN',pad.l+110,pad.t+18);
+}
+
+/* ========== 第三章：c 分布图 ========== */
+var c3C=0;
+
+function drawC3(){
+  var dp=1.5;
+  var v=setupCanvas($('c3Chart'),880,340);
+  var ctx=v.ctx,W=v.W,H=v.H;
+  var pad={l:60,r:30,t:30,b:50};
+  var pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  var xMin=-4,xMax=6;
+
+  function X(x){return pad.l+(x-xMin)/(xMax-xMin)*pw;}
+  function Y(y){return pad.t+ph-(y/0.42)*ph;}
+
+  ctx.clearRect(0,0,W,H);
+
+  // 网格
+  ctx.strokeStyle='#eef3f7';ctx.lineWidth=1;
+  for(var i=1;i<10;i++){var gx=Math.round(X(xMin+(xMax-xMin)*i/10))+.5;ctx.beginPath();ctx.moveTo(gx,pad.t);ctx.lineTo(gx,pad.t+ph);ctx.stroke();}
+
+  // 噪音曲线
+  ctx.beginPath();
+  for(var x=xMin;x<=xMax;x+=0.05){var px=X(x),py=Y(npdf(x,0,1));if(x===xMin)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.strokeStyle='#3a6ea8';ctx.lineWidth=2.2;ctx.stroke();
+
+  // 信号曲线
+  ctx.beginPath();
+  for(var x=xMin;x<=xMax;x+=0.05){var px=X(x),py=Y(npdf(x,dp,1));if(x===xMin)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.strokeStyle='#1a8a6e';ctx.lineWidth=2.2;ctx.stroke();
+
+  // 判定标准线
+  var xc=dp/2+c3C;
+  ctx.setLineDash([6,4]);ctx.strokeStyle='#c44a4a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(X(xc),pad.t);ctx.lineTo(X(xc),pad.t+ph);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // c 标签
+  ctx.fillStyle='#c44a4a';ctx.font='700 13px ui-monospace,monospace';ctx.textAlign='center';
+  ctx.fillText('c = '+c3C.toFixed(2),X(xc),pad.t+18);
+
+  // 误报区填充
+  ctx.beginPath();ctx.moveTo(X(xc),Y(0));
+  for(var x=xc;x<=xMax;x+=0.05){ctx.lineTo(X(x),Y(npdf(x,0,1)));}
+  ctx.lineTo(X(xMax),Y(0));ctx.closePath();
+  ctx.fillStyle='rgba(196,122,26,.25)';ctx.fill();
+
+  // 击中区填充
+  ctx.beginPath();ctx.moveTo(X(xc),Y(0));
+  for(var x=xc;x<=xMax;x+=0.05){ctx.lineTo(X(x),Y(npdf(x,dp,1)));}
+  ctx.lineTo(X(xMax),Y(0));ctx.closePath();
+  ctx.fillStyle='rgba(26,138,110,.25)';ctx.fill();
+
+  // 坐标轴
+  ctx.strokeStyle='#c4d3e0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ph);ctx.lineTo(pad.l+pw,pad.t+ph);ctx.stroke();
+
+  // 轴标题
+  ctx.fillStyle='#8899aa';ctx.font='12px ui-monospace,monospace';ctx.textAlign='center';
+  ctx.fillText('感觉强度 →',pad.l+pw/2,H-16);
+
+  // 图例
+  ctx.textAlign='left';ctx.font='600 12px -apple-system,sans-serif';
+  ctx.fillStyle='#3a6ea8';ctx.fillText('■ 噪音',pad.l+10,pad.t+18);
+  ctx.fillStyle='#1a8a6e';ctx.fillText('■ 信号',pad.l+100,pad.t+18);
+  ctx.fillStyle='#c47a1a';ctx.fillText('■ 误报区',pad.l+190,pad.t+18);
+  ctx.fillStyle='#1a8a6e';ctx.fillText('■ 击中区',pad.l+280,pad.t+18);
+
+  // 更新反馈
+  var pFA=1-ncdf(xc),pH=1-ncdf(xc-dp);
+  $('c3PH').textContent=pH.toFixed(2);
+  $('c3PFA').textContent=pFA.toFixed(2);
+  $('c3CFb').textContent=(c3C>=0?'+':'')+c3C.toFixed(2);
+}
+
+/* ========== 第四章：先验与奖惩 ========== */
+var c4Prior=0.5,c4VH=10,c4CM=8,c4CFA=2,c4VCR=5;
+
+function drawC4Dist(){
+  var dp=1.5;
+  var v=setupCanvas($('c4Chart'),880,280);
+  var ctx=v.ctx,W=v.W,H=v.H;
+  var pad={l:50,r:30,t:20,b:40};
+  var pw=W-pad.l-pad.r,ph=H-pad.t-pad.b;
+  var xMin=-4,xMax=6;
+
+  function X(x){return pad.l+(x-xMin)/(xMax-xMin)*pw;}
+  function Y(y){return pad.t+ph-(y/0.42)*ph;}
+
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#eef3f7';ctx.lineWidth=1;
+  for(var i=1;i<10;i++){var gx=Math.round(X(xMin+(xMax-xMin)*i/10))+.5;ctx.beginPath();ctx.moveTo(gx,pad.t);ctx.lineTo(gx,pad.t+ph);ctx.stroke();}
+
+  // 噪音曲线（宽度反映先验）
+  var noiseH=0.42*(1-c4Prior)+0.08;
+  ctx.beginPath();
+  for(var x=xMin;x<=xMax;x+=0.05){var px=X(x),py=Y(npdf(x,0,1)*noiseH);if(x===xMin)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.strokeStyle='#3a6ea8';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.fillStyle='rgba(58,110,168,.10)';
+  ctx.lineTo(X(xMax),Y(0));ctx.lineTo(X(xMin),Y(0));ctx.closePath();ctx.fill();
+
+  // 信号曲线
+  var sigH=0.42*c4Prior+0.08;
+  ctx.beginPath();
+  for(var x=xMin;x<=xMax;x+=0.05){var px=X(x),py=Y(npdf(x,dp,1)*sigH);if(x===xMin)ctx.moveTo(px,py);else ctx.lineTo(px,py);}
+  ctx.strokeStyle='#1a8a6e';ctx.lineWidth=2.5;ctx.stroke();
+  ctx.fillStyle='rgba(26,138,110,.10)';
+  ctx.lineTo(X(xMax),Y(0));ctx.lineTo(X(xMin),Y(0));ctx.closePath();ctx.fill();
+
+  // 坐标轴
+  ctx.strokeStyle='#c4d3e0';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(pad.l,pad.t);ctx.lineTo(pad.l,pad.t+ph);ctx.lineTo(pad.l+pw,pad.t+ph);ctx.stroke();
+
+  ctx.fillStyle='#8899aa';ctx.font='12px ui-monospace,monospace';ctx.textAlign='center';
+  ctx.fillText('感觉强度 →',pad.l+pw/2,H-12);
+
+  ctx.textAlign='left';ctx.font='600 11px -apple-system,sans-serif';
+  ctx.fillStyle='#3a6ea8';ctx.fillText('■ 噪音',pad.l+10,pad.t+14);
+  ctx.fillStyle='#1a8a6e';ctx.fillText('■ 信号',pad.l+90,pad.t+14);
+  ctx.fillStyle='#8899aa';ctx.fillText('（曲线高度反映先验概率）',pad.l+170,pad.t+14);
+}
+
+function drawC4Chart(){
+  var v=setupCanvas($('c4Chart'),880,280);
+  // 已在 drawC4Dist 中绘制，此处仅更新数值
+  updateC4Stats();
+}
+
+function updateC4Stats(){
+  var pS=c4Prior,pN=1-pS;
+  var betaPrior=pN/pS;
+  var cPrior=Math.log(Math.max(betaPrior,1e-6))/1.5;
+
+  $('c4PS').textContent=pS.toFixed(2);
+  $('c4Beta').textContent=betaPrior.toFixed(2);
+  $('c4Copt').textContent=(cPrior>=0?'+':'')+cPrior.toFixed(2);
+
+  // 含奖惩的最优β
+  var num=c4VCR-c4CFA, den=c4VH+c4CM;
+  var betaFull=den>0?betaPrior*Math.max(num,0.01)/den:NaN;
+  var cFull=isFinite(betaFull)&&betaFull>0?Math.log(betaFull)/1.5:NaN;
+
+  $('c4BetaFull').textContent=isFinite(betaFull)?betaFull.toFixed(2):'—';
+  $('c4CFull').textContent=isFinite(cFull)?((cFull>=0?'+':'')+cFull.toFixed(2)):'—';
+
+  var dir='中性';
+  if(isFinite(cFull)){
+    if(cFull>0.25)dir='偏保守';
+    else if(cFull<-0.25)dir='偏宽松';
+  }
+  $('c4Dir').textContent=dir;
+  $('c4Dir').style.color=isFinite(cFull)?(cFull>0.25?'#c47a1a':(cFull<-0.25?'#1a8a6e':'#8899aa')):'#8899aa';
+}
+
+/* ========== 事件绑定 ========== */
+function init(){
+  // 导航
+  document.querySelectorAll('.navbtn').forEach(function(b){
+    b.addEventListener('click',function(){
+      if(b.dataset.view) go(b.dataset.view);
+    });
+  });
+
+  // 第二章滑块
+  $('c2Dp').addEventListener('input',function(){
+    c2Dp=parseFloat(this.value);
+    $('c2DpVal').textContent=c2Dp.toFixed(2);
+    drawC2();
+  });
+
+  // 第三章滑块
+  $('c3C').addEventListener('input',function(){
+    c3C=parseFloat(this.value);
+    $('c3CVal').textContent=(c3C>=0?'+':'')+c3C.toFixed(2);
+    drawC3();
+  });
+
+  // 第四章滑块
+  $('c4Prior').addEventListener('input',function(){
+    c4Prior=parseFloat(this.value);
+    $('c4PriorVal').textContent=c4Prior.toFixed(2);
+    drawC4Dist();updateC4Stats();
+  });
+  ['c4VH','c4CM','c4CFA','c4VCR'].forEach(function(id){
+    $(id).addEventListener('input',function(){
+      var val=parseFloat(this.value);
+      if(id==='c4VH'){c4VH=val;$('c4VHVal').textContent=val;}
+      if(id==='c4CM'){c4CM=val;$('c4CMVal').textContent=val;}
+      if(id==='c4CFA'){c4CFA=val;$('c4CFAVal').textContent=val;}
+      if(id==='c4VCR'){c4VCR=val;$('c4VCRVal').textContent=val;}
+      updateC4Stats();
+    });
+  });
+
+  // 初始绘制
+  drawC2();
+  drawC3();
+  drawC4Dist();
+  updateC4Stats();
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',init);
+}else{
+  init();
+}
+
+})();
+</script>
+
+</body>
+</html>

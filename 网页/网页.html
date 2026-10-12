@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微震监测实验 · 信号检测论</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#eef8fa;
+  --surface:#ffffff;
+  --surface-2:#f6fcfd;
+  --border:#d8ebef;
+  --border-2:#b9dde4;
+  --cyan:#0e8a9e;
+  --cyan-d:#0a6b7a;
+  --cyan-l:#e2f4f7;
+  --cyan-m:#7fcfdd;
+  --ink:#12333a;
+  --ink-2:#41646e;
+  --muted:#83a1a9;
+  --hit:#12a897;
+  --miss:#c94848;
+  --fa:#c47c0c;
+  --cr:#3573b3;
+  --wave:#0f4a58;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+
+html,body{height:100%}
+
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+
+/* ============ 顶栏 ============ */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 28px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand .dot{
+  width:10px;height:10px;border-radius:50%;
+  background:var(--cyan);flex:none;
+  box-shadow:0 0 0 4px var(--cyan-l);
+}
+.brand h1{font-size:14.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;color:var(--ink)}
+.brand .sub{
+  display:block;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.16em;color:var(--muted);margin-top:-2px;
+}
+.topbar nav{display:flex;gap:6px}
+.navbtn{
+  padding:7px 18px;border-radius:9px;border:1px solid transparent;
+  background:transparent;color:var(--ink-2);
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.16s;
+}
+.navbtn:hover{background:var(--cyan-l);color:var(--cyan-d)}
+.navbtn.active{background:var(--cyan);color:#fff;border-color:var(--cyan)}
+
+/* ============ 视图 ============ */
+.view{display:none;max-width:1040px;margin:0 auto;padding:34px 28px 80px}
+.view.active{display:block;animation:fade .26s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(max-width:640px){
+  .topbar{padding:11px 16px}
+  .brand h1{font-size:13px}
+  .view{padding:22px 16px 64px}
+}
+
+/* ============ 面板 ============ */
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:24px;
+  margin-bottom:18px;
+}
+.panel h3{
+  font-size:12px;font-weight:700;letter-spacing:.12em;
+  color:var(--cyan);margin-bottom:18px;
+  display:flex;align-items:center;gap:9px;text-transform:uppercase;
+}
+.panel h3::before{
+  content:'';width:3px;height:13px;border-radius:2px;
+  background:var(--cyan);flex:none;
+}
+
+/* ============ Hero ============ */
+.hero{margin-bottom:28px}
+.kicker{
+  font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+  color:var(--cyan);margin-bottom:12px;font-weight:600;
+}
+.hero h2{
+  font-size:clamp(26px,4.2vw,40px);
+  line-height:1.26;font-weight:800;letter-spacing:-.015em;margin-bottom:16px;
+  color:var(--ink);
+}
+.hero h2 em,
+.res-head h2 em{
+  font-style:normal;color:var(--cyan);
+  box-shadow:inset 0 -0.32em 0 var(--cyan-l);
+}
+.lede{font-size:15px;color:var(--ink-2);max-width:730px;line-height:1.78}
+.lede strong{color:var(--cyan-d);font-weight:700}
+.hl{color:var(--cyan-d);font-weight:700}
+
+/* ============ 布局 ============ */
+.setup{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+@media(max-width:820px){.setup{grid-template-columns:1fr}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:820px){.grid2{grid-template-columns:1fr}}
+
+/* ============ 表单 ============ */
+.field{margin-bottom:22px}
+.field>label{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:13px;color:var(--ink-2);font-weight:600;margin-bottom:11px;
+}
+.field .val{font-family:var(--mono);font-size:17px;color:var(--cyan);font-weight:700}
+input[type=range]{
+  width:100%;height:5px;-webkit-appearance:none;appearance:none;
+  background:var(--cyan-l);
+  border-radius:99px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:19px;height:19px;border-radius:50%;
+  background:var(--cyan);border:3px solid #fff;
+  box-shadow:0 0 0 1px var(--cyan-m);cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:15px;height:15px;border-radius:50%;background:var(--cyan);
+  border:3px solid #fff;box-shadow:0 0 0 1px var(--cyan-m);cursor:pointer;
+}
+.hint{font-size:12px;color:var(--muted);margin-top:9px;line-height:1.6}
+
+.seg{display:flex;gap:8px}
+.seg button{
+  flex:1;padding:9px 0;border-radius:9px;font:inherit;font-size:13px;
+  font-weight:600;cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--ink-2);
+  transition:.16s;
+}
+.seg button:hover{border-color:var(--cyan-m);color:var(--cyan-d)}
+.seg button.active{background:var(--cyan);border-color:var(--cyan);color:#fff}
+
+/* ============ 按钮 ============ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 26px;border-radius:10px;
+  font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;transition:.16s;
+  background:var(--surface);color:var(--ink);border:1px solid var(--border-2);
+  text-decoration:none;
+}
+.btn:hover{background:var(--cyan-l);border-color:var(--cyan-m);color:var(--cyan-d)}
+.btn.primary{
+  background:var(--cyan);color:#fff;border-color:var(--cyan);
+  width:100%;padding:14px;
+}
+.btn.primary:hover{background:var(--cyan-d);border-color:var(--cyan-d);color:#fff}
+.btn.danger{background:#fdecec;border-color:#f3b9b9;color:#b93a3a}
+.btn.danger:hover{background:#fbdcdc;border-color:#e79a9a;color:#a02c2c}
+.btn.ok{background:#e6f7f5;border-color:#a8ded8;color:#0b7c72}
+.btn.ok:hover{background:#d5f1ee;border-color:#8bd0c8;color:#0a6b62}
+.btn.ghost{background:var(--surface-2);border-color:var(--border-2);color:var(--cyan-d)}
+.btn.ghost:hover{background:var(--cyan-l);border-color:var(--cyan-m)}
+kbd{
+  font-family:var(--mono);font-size:10.5px;padding:2px 6px;border-radius:5px;
+  background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.3);
+  opacity:.85;margin-left:4px;
+}
+.btn:not(.primary) kbd{background:var(--cyan-l);border-color:var(--border-2);color:var(--cyan-d)}
+
+/* ============ 文本块 ============ */
+.prose{font-size:14.5px;color:var(--ink-2);margin-bottom:12px;line-height:1.78}
+.prose:last-child{margin-bottom:0}
+.prose.muted{color:var(--muted);font-size:13.5px}
+.c-cyan{color:var(--cyan-d);font-weight:700}
+.c-amber{color:var(--fa);font-weight:700}
+
+.steps{list-style:none}
+.steps li{
+  display:flex;gap:12px;align-items:flex-start;padding:11px 0;
+  font-size:14px;color:var(--ink-2);border-bottom:1px solid var(--border);
+}
+.steps li:last-child{border-bottom:none;padding-bottom:0}
+.steps li > b{
+  flex:none;width:22px;height:22px;border-radius:7px;
+  background:var(--cyan-l);color:var(--cyan-d);
+  font-size:11px;font-family:var(--mono);font-weight:700;
+  display:flex;align-items:center;justify-content:center;margin-top:3px;
+}
+.steps li > span{flex:1;min-width:0}
+
+/* ============ 游戏 ============ */
+.gamebar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.gb{
+  flex:1;min-width:108px;
+  background:var(--surface);border:1px solid var(--border);border-radius:11px;
+  padding:10px 15px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+}
+.gb .k{font-size:11.5px;color:var(--muted);letter-spacing:.04em;font-weight:600}
+.gb .v{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--ink)}
+
+.scope{
+  position:relative;border-radius:14px;overflow:hidden;
+  border:1px solid var(--border);
+  background:#fff;
+}
+.scope canvas{display:block;width:100%;height:auto}
+.mask{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  background:#ffffff;
+  opacity:0;pointer-events:none;transition:opacity .18s;
+}
+.mask.on{opacity:1}
+.mask .big{font-size:19px;font-weight:800;color:var(--cyan);letter-spacing:.08em}
+.mask .small{font-size:13px;color:var(--muted)}
+
+.answerbar{
+  display:flex;gap:14px;margin-top:18px;
+  opacity:0;pointer-events:none;transform:translateY(8px);transition:.2s;
+}
+.answerbar.on{opacity:1;pointer-events:auto;transform:none}
+.answerbar .btn{flex:1;padding:17px;font-size:16px}
+
+.feedback{
+  margin-top:16px;text-align:center;font-size:15px;font-weight:700;
+  min-height:28px;transition:.2s;
+}
+.feedback.ok{color:var(--hit)}
+.feedback.warn{color:var(--fa)}
+.feedback.bad{color:var(--miss)}
+
+/* ============ 结果页 ============ */
+.res-head{margin-bottom:24px}
+.res-head h2{
+  font-size:clamp(24px,3.6vw,34px);font-weight:800;
+  letter-spacing:-.015em;margin-bottom:8px;line-height:1.28;
+}
+.res-head p{font-size:14px;color:var(--muted)}
+
+.hero-metrics{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+@media(max-width:640px){.hero-metrics{grid-template-columns:1fr}}
+.hm-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:24px;
+}
+.hm-card.accent{background:var(--cyan-l);border-color:var(--cyan-m)}
+.hm-label{
+  font-size:12px;font-weight:700;letter-spacing:.1em;
+  color:var(--cyan);margin-bottom:10px;text-transform:uppercase;
+}
+.hm-value{
+  font-family:var(--mono);font-size:52px;font-weight:700;
+  line-height:1;color:var(--ink);letter-spacing:-.02em;margin-bottom:14px;
+}
+.hm-card.accent .hm-value{color:var(--cyan-d)}
+.hm-formula{
+  display:inline-block;
+  font-family:var(--mono);font-size:12.5px;color:var(--ink-2);
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:8px;padding:6px 11px;margin-bottom:13px;
+}
+.hm-card.accent .hm-formula{background:#fff;border-color:var(--cyan-m);color:var(--cyan-d)}
+.hm-desc{font-size:13px;color:var(--ink-2);line-height:1.7}
+
+/* 2×2 判断矩阵 */
+.sdt-matrix{
+  display:grid;
+  grid-template-columns:100px 1fr 1fr;
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+}
+.sm-corner{background:var(--surface-2)}
+.sm-head{
+  background:var(--surface-2);
+  padding:10px 12px;
+  font-size:12px;font-weight:700;color:var(--muted);
+  letter-spacing:.04em;text-align:center;
+}
+.sm-side{
+  background:var(--surface-2);
+  padding:14px 8px;
+  font-size:12px;font-weight:700;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;line-height:1.45;
+}
+.sm-cell{background:var(--surface);padding:15px 16px;border-left:4px solid transparent}
+.sm-name{font-size:12.5px;font-weight:700;color:var(--ink-2);margin-bottom:5px}
+.sm-num{font-family:var(--mono);font-size:32px;font-weight:700;line-height:1.05}
+.sm-rate{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:5px}
+.sm-cell.hit{border-left-color:var(--hit)}
+.sm-cell.hit .sm-num{color:var(--hit)}
+.sm-cell.miss{border-left-color:var(--miss)}
+.sm-cell.miss .sm-num{color:var(--miss)}
+.sm-cell.fa{border-left-color:var(--fa)}
+.sm-cell.fa .sm-num{color:var(--fa)}
+.sm-cell.cr{border-left-color:var(--cr)}
+.sm-cell.cr .sm-num{color:var(--cr)}
+
+@media(max-width:560px){
+  .sdt-matrix{grid-template-columns:72px 1fr 1fr}
+  .sm-cell{padding:11px 10px}
+  .sm-num{font-size:22px}
+  .sm-name{font-size:11px}
+  .sm-rate{font-size:10.5px}
+  .sm-head{font-size:11px;padding:8px 6px}
+  .sm-side{font-size:11px}
+}
+
+.pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;padding-top:20px;border-top:1px solid var(--border)}
+.pill{
+  flex:1;min-width:110px;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+}
+.pill .k{font-size:12px;color:var(--muted);font-weight:600}
+.pill .v{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--cyan-d)}
+
+/* 对比卡片 */
+.cmp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:760px){.cmp-cards{grid-template-columns:1fr}}
+.cmp-card{
+  background:var(--surface-2);border:1px solid var(--border);border-radius:12px;
+  padding:18px;
+}
+.cmp-card.you{background:var(--cyan-l);border-color:var(--cyan-m)}
+.cmp-title{
+  font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px;
+  padding-bottom:10px;border-bottom:1px solid var(--border);
+}
+.cmp-card.you .cmp-title{color:var(--cyan-d);border-bottom-color:var(--cyan-m)}
+.cmp-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-size:13px;padding:5px 0;
+}
+.cmp-row span{color:var(--muted)}
+.cmp-row b{font-family:var(--mono);font-size:14.5px;color:var(--ink);font-weight:700}
+.cmp-card.you .cmp-row b{color:var(--cyan-d)}
+.cmp-row.big b{font-size:17px}
+
+/* ============ 记录表 ============ */
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.rec{width:100%;border-collapse:collapse;font-size:13px;min-width:660px}
+table.rec th{
+  text-align:left;padding:10px 12px;color:var(--muted);font-size:11.5px;
+  font-weight:700;letter-spacing:.06em;border-bottom:1px solid var(--border);
+  white-space:nowrap;text-transform:uppercase;
+}
+table.rec td{
+  padding:11px 12px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:12.5px;white-space:nowrap;color:var(--ink-2);
+}
+table.rec tr:last-child td{border-bottom:none}
+table.rec tbody tr:hover td{background:var(--surface-2)}
+table.rec td.hi{color:var(--cyan-d);font-weight:700}
+table.rec td.pos{color:var(--hit);font-weight:700}
+table.rec td.neg{color:var(--miss);font-weight:700}
+
+.empty{
+  text-align:center;padding:36px 16px;color:var(--muted);font-size:13.5px;
+}
+
+/* ============ 操作按钮组 ============ */
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
+.actions .btn{flex:1;min-width:150px}
+
+/* ============ 教程 ============ */
+.tut-legend{
+  display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;
+  font-size:12.5px;color:var(--muted);font-weight:600;
+}
+.tut-legend span{display:flex;align-items:center;gap:7px}
+.tut-legend i{display:inline-block;width:18px;height:3px;border-radius:2px}
+.tut-legend i.wave{background:var(--wave)}
+.tut-legend i.mark{background:var(--fa)}
+.tut-canvas-wrap{
+  border:1px solid var(--border);border-radius:12px;overflow:hidden;
+  background:#fff;
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <div>
+      <h1>微震监测实验</h1>
+      <span class="sub">SIGNAL DETECTION THEORY</span>
+    </div>
+  </div>
+  <nav>
+    <button class="navbtn active" data-view="home">实验</button>
+    <button class="navbtn" data-view="records">记录</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ================= 首页 ================= -->
+  <section class="view active" id="view-home">
+    <div class="hero">
+      <div class="kicker">工程心理学 · 交互实验</div>
+      <h2>噪声里那一<em>闪</em>而过的微震，<br>你真的看见了吗？</h2>
+      <p class="lede">
+        你是地震台网的监测员。屏幕上是一段 60 秒的地面震动记录——
+        大多数时候只是风、车流和脚步的背景噪声，偶尔会藏进一次微弱的微震。
+        你的任务只有一句话：<strong>这段记录里，到底有没有事件？</strong>
+      </p>
+    </div>
+
+    <div class="setup">
+      <div class="panel">
+        <h3>实验设置</h3>
+
+        <div class="field">
+          <label>信号强度（系统 d′）<span class="val" id="setupDpVal">1.80</span></label>
+          <input type="range" id="setupDp" min="0.6" max="3.2" step="0.1" value="1.8">
+          <p class="hint">微震与噪声在感觉上的分离程度。调小它，事件就更容易被淹没在噪声里。</p>
+        </div>
+
+        <div class="field">
+          <label>试次数<span class="val" id="setupTrialsVal">20</span></label>
+          <div class="seg" id="setupTrials">
+            <button data-n="20" class="active">20 次</button>
+            <button data-n="40">40 次</button>
+            <button data-n="80">80 次</button>
+          </div>
+          <p class="hint">次数越多，d′ 与 c 的估计越稳定。</p>
+        </div>
+
+        <button class="btn primary" id="btnStart">开始监测 →</button>
+        <a class="btn ghost" id="btnConcept"
+           href="file:///C:/Users/22628/Desktop/网页/网页22.html"
+           target="_blank" rel="noopener"
+           style="width:100%;margin-top:12px;padding:13px">概念讲解</a>
+      </div>
+
+      <div class="panel">
+        <h3>你将会经历什么</h3>
+        <ul class="steps">
+          <li><b>1</b><span>先看一段一分钟的操作教程。</span></li>
+          <li><b>2</b><span>每试次播放一段 60 秒的地震记录（约 2 秒看完）。</span></li>
+          <li><b>3</b><span>记录消失后，你要判断：有微震，还是只有噪声。</span></li>
+          <li><b>4</b><span>结束后，我们不只算「对了多少」，而是把你的表现拆成两件事。</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>先别急着看答案</h3>
+      <p class="prose">
+        大多数人玩完，第一反应是看「我答对了百分之多少」。
+        但在信号检测论里，准确率恰恰是最没有信息量的那个数字。
+        真正要看的是两个更基本的量：<b class="c-cyan">d′（辨别力）</b> 与 <b class="c-amber">c（判断标准）</b>。
+      </p>
+      <p class="prose">
+        它们回答两个完全不同的问题——<br>
+        <b class="c-cyan">d′：你能不能分得清？</b>　信号和噪声在你的感觉里离得有多开。<br>
+        <b class="c-amber">c：你敢不敢说有？</b>　你心里的报警门槛设在了哪里。
+      </p>
+      <p class="prose muted">
+        同一个人的 d′ 在一段时间里基本稳定，但 c 可以被一句话改变：
+        「宁可错报，也别漏报」——你还没开始玩，标准就已经动了。
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 教程 ================= -->
+  <section class="view" id="view-tutorial">
+    <div class="hero" style="margin-bottom:26px">
+      <div class="kicker">实验教程</div>
+      <h2 style="font-size:clamp(24px,3.6vw,34px)">一分钟<em>上手指南</em></h2>
+      <p class="lede">正式开始前，先看看你会遇到什么、需要做什么。看完点最下面的按钮即可开始。</p>
+    </div>
+
+    <div class="panel">
+      <h3>你会看到的画面</h3>
+      <p class="prose" style="font-size:13.5px">
+        下面是一段示例记录。绝大部分起伏来自背景噪声（风、车流、脚步），
+        偶尔会叠加一次微震——它就是你要找的东西。
+      </p>
+      <div class="tut-canvas-wrap">
+        <canvas id="tutCanvas" width="900" height="300"></canvas>
+      </div>
+      <div class="tut-legend">
+        <span><i class="wave"></i>地震波形</span>
+        <span><i class="mark"></i>虚线处标注了一次可能的微震</span>
+      </div>
+      <p class="hint">
+        注意：示例中的事件位置和强度每次都不同，真实实验中强度还会随你设置的 d′ 变化，
+        有时远比这个示例更微弱。
+      </p>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <h3>你要做什么</h3>
+        <ul class="steps">
+          <li><b>1</b><span>每试次播放一段 60 秒记录，大约 2 秒看完。</span></li>
+          <li><b>2</b><span>记录消失后，画面被遮住，你来做判断。</span></li>
+          <li><b>3</b><span>判断：这段记录里<b class="c-cyan">有微震</b>，还是<b class="c-cyan">只有噪声</b>。</span></li>
+          <li><b>4</b><span>大约一半的记录里确实藏着微震，顺序随机。</span></li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h3>怎么作答</h3>
+        <p class="prose" style="font-size:13.5px">用屏幕下方的两个按钮作答，也可以直接用键盘：</p>
+        <ul class="steps">
+          <li><b>1</b><span><b class="c-cyan">有微震</b> —— 点击左侧按钮，或按 <kbd>1</kbd> <kbd>←</kbd> <kbd>A</kbd></span></li>
+          <li><b>2</b><span><b class="c-cyan">只有噪声</b> —— 点击右侧按钮，或按 <kbd>2</kbd> <kbd>→</kbd> <kbd>D</kbd></span></li>
+        </ul>
+        <p class="hint">没有时间限制，但请凭第一感觉尽快作答，不要反复纠结。</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>三个提醒</h3>
+      <ul class="steps">
+        <li><b>·</b><span>不要试图找规律或数次数，事件出现顺序是随机打乱的。</span></li>
+        <li><b>·</b><span>犹豫不会让信号变清楚。看不清时凭直觉选，也是一种真实的数据。</span></li>
+        <li><b>·</b><span>结束后我们会看两个指标：<b class="c-cyan">d′（辨别力）</b> 与 <b class="c-amber">c（判断标准）</b>，而不是准确率。</span></li>
+      </ul>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnTutBack">← 返回设置</button>
+      <button class="btn primary" id="btnTutGo" style="flex:2;width:auto">我已了解，开始监测 →</button>
+    </div>
+  </section>
+
+  <!-- ================= 游戏 ================= -->
+  <section class="view" id="view-game">
+    <div class="gamebar">
+      <div class="gb"><span class="k">试次</span><span class="v" id="gTrial">0 / 20</span></div>
+      <div class="gb"><span class="k">击中</span><span class="v" id="gHit" style="color:var(--hit)">0</span></div>
+      <div class="gb"><span class="k">误报</span><span class="v" id="gFA" style="color:var(--fa)">0</span></div>
+    </div>
+
+    <div class="scope">
+      <canvas id="seismo" width="900" height="430"></canvas>
+      <div class="mask" id="scopeMask">
+        <div class="big">记录已归档</div>
+        <div class="small">刚才那 60 秒里，有微震吗？</div>
+      </div>
+    </div>
+
+    <div class="answerbar" id="answerBar">
+      <button class="btn danger" id="btnYes">有微震<kbd>1</kbd></button>
+      <button class="btn ok" id="btnNo">只有噪声<kbd>2</kbd></button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+  </section>
+
+  <!-- ================= 结果 ================= -->
+  <section class="view" id="view-result">
+
+    <div class="res-head">
+      <div class="kicker">实验结果 · Signal Detection Theory</div>
+      <h2>你答对了多少，<em>其实说明不了什么</em></h2>
+      <p id="resSub"></p>
+    </div>
+
+    <!-- 核心两指标 -->
+    <div class="hero-metrics">
+      <div class="hm-card accent">
+        <div class="hm-label">辨别力 d′ ｜ 你能不能分清</div>
+        <div class="hm-value" id="kDP">—</div>
+        <div class="hm-formula">d′ = Z(击中率) − Z(误报率)</div>
+        <div class="hm-desc" id="dpRead"></div>
+      </div>
+      <div class="hm-card">
+        <div class="hm-label">判断标准 c ｜ 你敢不敢说有</div>
+        <div class="hm-value" id="kC">—</div>
+        <div class="hm-formula">c = −[ Z(击中率) + Z(误报率) ] / 2</div>
+        <div class="hm-desc" id="cRead"></div>
+      </div>
+    </div>
+
+    <!-- 概念：两个分布 -->
+    <div class="panel">
+      <h3>d′ 与 c 到底在说什么</h3>
+      <p class="prose">
+        信号检测论认为，每一次判断背后都同时发生了两件事。
+        一件是<b class="c-cyan">感觉过程</b>：纯噪声、以及「噪声＋信号」，
+        在你的知觉系统里形成两个各自起伏的分布，它们重叠得越少，你越容易分辨——
+        这个分离程度就是 <b class="c-cyan">d′</b>。
+      </p>
+      <p class="prose">
+        另一件是<b class="c-amber">决策过程</b>：你在两个分布之间画了一条竖线，
+        感觉超过了它就说「有」，没超过就说「没有」——这条线的位置就是 <b class="c-amber">c</b>。
+      </p>
+      <p class="prose muted">
+        说得直白一点：<b class="c-cyan">d′ 描述你的眼睛</b>，<b class="c-amber">c 描述你的胆子</b>。
+        前者由信号本身和你感官的灵敏度决定，后者由动机、期望、奖惩，甚至一句口头指示决定。
+      </p>
+    </div>
+
+    <!-- 2×2 判断矩阵 -->
+    <div class="panel">
+      <h3>2 × 2 判断矩阵</h3>
+      <p class="prose" style="font-size:13.5px;margin-bottom:18px">
+        把「真实情况」与「你的回答」交叉，就得到信号检测论最基本的四格。
+        注意：击中与虚报永远是一对，漏报与正确拒斥永远是一对——
+        你抬高门槛，漏报一定增多；你压低门槛，虚报一定增多。它们无法同时减少。
+      </p>
+
+      <div class="sdt-matrix">
+        <div class="sm-corner"></div>
+        <div class="sm-head">你回答：有微震</div>
+        <div class="sm-head">你回答：只有噪声</div>
+
+        <div class="sm-side">真实情况<br>有微震</div>
+        <div class="sm-cell hit">
+          <div class="sm-name">击中 Hit</div>
+          <div class="sm-num" id="mH">0</div>
+          <div class="sm-rate">P(H) = <span id="kPH">—</span></div>
+        </div>
+        <div class="sm-cell miss">
+          <div class="sm-name">漏报 Miss</div>
+          <div class="sm-num" id="mM">0</div>
+          <div class="sm-rate">P(M) = <span id="kPM">—</span></div>
+        </div>
+
+        <div class="sm-side">真实情况<br>只有噪声</div>
+        <div class="sm-cell fa">
+          <div class="sm-name">虚报 False Alarm</div>
+          <div class="sm-num" id="mFA">0</div>
+          <div class="sm-rate">P(FA) = <span id="kPFA">—</span></div>
+        </div>
+        <div class="sm-cell cr">
+          <div class="sm-name">正确拒斥 Correct Rejection</div>
+          <div class="sm-num" id="mCR">0</div>
+          <div class="sm-rate">P(CR) = <span id="kPCR">—</span></div>
+        </div>
+      </div>
+
+      <div class="pills">
+        <div class="pill"><span class="k">准确率</span><span class="v" id="kAcc">—</span></div>
+        <div class="pill"><span class="k">Z(击中率)</span><span class="v" id="kZH">—</span></div>
+        <div class="pill"><span class="k">Z(误报率)</span><span class="v" id="kZF">—</span></div>
+      </div>
+      <p class="hint">
+        Z 表示把比率换算成标准正态分布上的分数（Z 分数）。
+        d′ 就是这两个 Z 分数之差，c 是它们和的一半取负号。
+      </p>
+    </div>
+
+    <!-- ROC -->
+    <div class="panel">
+      <h3>ROC 曲线：把 c 从 d′ 里剥出来</h3>
+      <p class="prose">
+        横轴是虚报率 P(FA)，纵轴是击中率 P(H)。当信号强度固定时，
+        如果你把判断标准从极严一路调到极松，得到的点就会连成一条弯曲的 ROC 曲线——
+        这条曲线的<b class="c-cyan">形状只由 d′ 决定</b>，而你在曲线上的<b class="c-amber">位置只由 c 决定</b>。
+      </p>
+      <p class="prose">
+        这正是信号检测论最漂亮的地方：一个数据点，同时携带了能力与策略两条信息。
+        沿曲线滑动＝改变标准；把整条曲线往左上角推＝提高辨别力。
+      </p>
+      <div style="display:flex;justify-content:center;margin-top:18px">
+        <canvas id="rocCanvas" width="720" height="560" style="width:100%;max-width:680px"></canvas>
+      </div>
+      <p class="hint" style="text-align:center;margin-top:10px">
+        浅青细线 d′ = 0.5 / 1.0 / 1.5 / 2.0 / 2.5 / 3.0 ｜ 对角线为 d′ = 0 的随机猜测
+      </p>
+    </div>
+
+    <!-- 对比 -->
+    <div class="panel">
+      <h3>准确率陷阱：为什么教科书不用它</h3>
+      <p class="prose">
+        假设微震的实际发生率只有 10%。一个从头到尾都回答「没有」的监测员，
+        什么也没做，准确率却有 90%。准确率把漏报和虚报一视同仁地算作错误，
+        可在真实的地震台网里，这两种错误的代价天差地别。
+      </p>
+      <p class="prose">
+        下面两位同事的 <b class="c-cyan">d′ 完全相同</b>，分辨能力一模一样，
+        但一位把标准压在很右边，一位压在很左边。
+        <b class="c-amber">c</b> 把这种策略差异量化了出来，准确率做不到。
+      </p>
+
+      <div class="cmp-cards" style="margin-top:18px">
+        <div class="cmp-card">
+          <div class="cmp-title">同事甲 · 谨慎型（c &gt; 0）</div>
+          <div class="cmp-row"><span>P(H)</span><b>0.58</b></div>
+          <div class="cmp-row"><span>P(FA)</span><b>0.05</b></div>
+          <div class="cmp-row big"><span>d′</span><b>1.80</b></div>
+          <div class="cmp-row big"><span>c</span><b>+0.70</b></div>
+          <div class="cmp-row"><span>准确率</span><b>76%</b></div>
+        </div>
+        <div class="cmp-card">
+          <div class="cmp-title">同事乙 · 激进型（c &lt; 0）</div>
+          <div class="cmp-row"><span>P(H)</span><b>0.95</b></div>
+          <div class="cmp-row"><span>P(FA)</span><b>0.42</b></div>
+          <div class="cmp-row big"><span>d′</span><b>1.80</b></div>
+          <div class="cmp-row big"><span>c</span><b>−0.70</b></div>
+          <div class="cmp-row"><span>准确率</span><b>76%</b></div>
+        </div>
+        <div class="cmp-card you">
+          <div class="cmp-title">你</div>
+          <div class="cmp-row"><span>P(H)</span><b id="yPH">—</b></div>
+          <div class="cmp-row"><span>P(FA)</span><b id="yPFA">—</b></div>
+          <div class="cmp-row big"><span>d′</span><b id="yDP">—</b></div>
+          <div class="cmp-row big"><span>c</span><b id="yC">—</b></div>
+          <div class="cmp-row"><span>准确率</span><b id="yAcc">—</b></div>
+        </div>
+      </div>
+
+      <p class="prose muted" style="margin-top:20px">
+        这就是为什么工程心理学必须把<b class="c-cyan">「能不能分清楚」</b>和
+        <b class="c-amber">「敢不敢说有」</b>分开测量：
+        前者关乎系统与人的感官，后者关乎代价、奖惩与信任。
+      </p>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="btnAgain">再测一次</button>
+      <button class="btn" id="btnHome">返回首页</button>
+      <button class="btn" id="btnRecords">查看记录</button>
+    </div>
+  </section>
+
+  <!-- ================= 记录 ================= -->
+  <section class="view" id="view-records">
+    <div class="hero" style="margin-bottom:26px">
+      <div class="kicker">本地记录</div>
+      <h2 style="font-size:clamp(24px,3.6vw,34px)">你的<em>实验轨迹</em></h2>
+      <p class="lede">
+        所有数据只保存在这台设备的浏览器里。刷新、关掉都还在，但不会上传到任何地方。
+      </p>
+    </div>
+
+    <div class="panel">
+      <h3>d′ 变化趋势</h3>
+      <canvas id="trendCanvas" width="800" height="260" style="width:100%;max-width:800px"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>历次结果</h3>
+      <div id="recEmpty" class="empty">还没有记录，先去做一次实验吧。</div>
+      <div id="recWrap" style="display:none">
+        <div class="tablewrap">
+          <table class="rec">
+            <thead>
+              <tr>
+                <th>时间</th><th>系统 d′</th><th>试次</th>
+                <th>P(H)</th><th>P(FA)</th><th>d′</th><th>c</th><th>准确率</th>
+              </tr>
+            </thead>
+            <tbody id="recBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <button class="btn" id="btnClear" style="margin-top:18px">清空记录</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+'use strict';
+
+/* ==================================================================
+   1. 统计工具
+   ================================================================== */
+
+function ncdf(x){
+  var t = 1/(1+0.2316419*Math.abs(x));
+  var d = 0.3989422804014327*Math.exp(-x*x/2);
+  var p = d*t*(0.319381530 + t*(-0.356563782 + t*(1.781477937 + t*(-1.821255978 + t*1.330274429))));
+  return x > 0 ? 1-p : p;
+}
+
+function invN(p){
+  if(p <= 0) return -4.6;
+  if(p >= 1) return 4.6;
+  var a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+            1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  var b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+            6.680131188771972e+01, -1.328068155288572e+01];
+  var c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+           -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  var d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+           3.754408661907416e+00];
+  var pl = 0.02425, ph = 1 - pl, q, r;
+
+  if(p < pl){
+    q = Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+           ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }else if(p <= ph){
+    q = p - 0.5; r = q*q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q /
+           (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+  }else{
+    q = Math.sqrt(-2*Math.log(1-p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) /
+            ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+}
+
+function randN(m, s){
+  var u = Math.random() || 1e-9, v = Math.random();
+  return m + s*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+
+/* ==================================================================
+   2. 全局状态
+   ================================================================== */
+
+var WAVE_N  = 900;
+var REC_KEY = 'sdt-microseismic-records-v1';
+
+/* —— 波形配色：深色，降低眩目感 —— */
+var WAVE_MAIN = '#0f4a58';
+var WAVE_GLOW = 'rgba(15,74,88,.10)';
+
+var cfg  = { dp: 1.8, trials: 20 };
+var G    = null;
+var view = null;
+
+var $ = function(id){ return document.getElementById(id); };
+
+/* ==================================================================
+   3. 画布工具
+   ================================================================== */
+
+function setupCanvas(cv, w, h){
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width  = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+  cv.style.width = '100%';
+  cv.style.height = 'auto';
+  var g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx: g, W: w, H: h };
+}
+
+/* ==================================================================
+   4. 波形生成（正式实验）
+   ================================================================== */
+
+function makeWave(sig, sysDp){
+
+  var data = new Float32Array(WAVE_N);
+
+  var y = 0;
+  for(var i = 0; i < WAVE_N; i++){
+    y = y * 0.90 + randN(0, 1) * 0.07;
+    data[i] = y;
+  }
+
+  var s   = sig ? randN(sysDp, 1) : randN(0, 1);
+  var vis = clamp((s + 2.0) / 5.2, 0, 1);
+  var amp = vis * 0.85;
+
+  var center = 300 + Math.floor(Math.random() * 300);
+  var width  = 34 + Math.random() * 14;
+  var phase  = Math.random() * Math.PI * 2;
+
+  for(var i = 0; i < WAVE_N; i++){
+    var u = (i - center) / width;
+    if(u < -2.6 || u > 2.6) continue;
+    data[i] += amp * Math.exp(-u*u*1.2) * Math.sin(u*10 + phase);
+  }
+
+  return { data: data, s: s, vis: vis };
+}
+
+/* ==================================================================
+   5. 波形渲染（正式实验）
+   ================================================================== */
+
+function drawWave(wave){
+  var ctx = view.ctx, W = view.W, H = view.H;
+  var mid = H / 2;
+
+  // 背景
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // 网格
+  ctx.strokeStyle = '#e8f4f7';
+  ctx.lineWidth = 1;
+  for(var i = 1; i < 12; i++){
+    var x = Math.round(W*i/12) + .5;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for(var j = 1; j < 8; j++){
+    var y = Math.round(H*j/8) + .5;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // 零线
+  ctx.strokeStyle = '#cfe8ed';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, mid + .5); ctx.lineTo(W, mid + .5); ctx.stroke();
+
+  // 波形
+  var unit = H * 0.40;
+  ctx.beginPath();
+  for(var k = 0; k < WAVE_N; k++){
+    var px = k / (WAVE_N - 1) * W;
+    var py = mid - wave.data[k] * unit;
+    if(k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.lineJoin = 'round';
+  ctx.lineCap  = 'round';
+
+  // 柔光层（很淡，只做陪衬，不刺眼）
+  ctx.strokeStyle = WAVE_GLOW;
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // 主波形（深色）
+  ctx.strokeStyle = WAVE_MAIN;
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  // 角标
+  ctx.fillStyle = '#a8c4cb';
+  ctx.font = '12px ui-monospace, Menlo, Consolas, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('STA-07 · BHZ · 100 Hz', 16, 24);
+  ctx.textAlign = 'right';
+  ctx.fillText('60 s', W - 16, H - 14);
+  ctx.textAlign = 'left';
+}
+
+/* ==================================================================
+   6. 教程示例波形
+   ================================================================== */
+
+function drawTutorialWave(){
+  var cv = $('tutCanvas');
+  if(!cv) return;
+
+  var v = setupCanvas(cv, 900, 300);
+  var ctx = v.ctx, W = v.W, H = v.H;
+  var mid = H / 2;
+
+  // 背景
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // 网格
+  ctx.strokeStyle = '#e8f4f7';
+  ctx.lineWidth = 1;
+  for(var i = 1; i < 12; i++){
+    var gx = Math.round(W*i/12) + .5;
+    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+  }
+  for(var j = 1; j < 6; j++){
+    var gy = Math.round(H*j/6) + .5;
+    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+  }
+
+  // 零线
+  ctx.strokeStyle = '#cfe8ed';
+  ctx.beginPath(); ctx.moveTo(0, mid + .5); ctx.lineTo(W, mid + .5); ctx.stroke();
+
+  // 确定性伪随机（LCG），保证每次进入教程看到同样的示例
+  var N = 900;
+  var data = new Float32Array(N);
+  var seed = 20240917;
+  function rnd(){
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296 - 0.5;
+  }
+
+  var y = 0;
+  for(var k = 0; k < N; k++){
+    y = y * 0.90 + rnd() * 0.14;
+    data[k] = y;
+  }
+
+  // 叠加一次中等强度的示例事件
+  var center = 588, width = 34, amp = 0.62;
+  for(var k = 0; k < N; k++){
+    var u = (k - center) / width;
+    if(u < -2.6 || u > 2.6) continue;
+    data[k] += amp * Math.exp(-u*u*1.2) * Math.sin(u*10);
+  }
+
+  // 绘制波形
+  var unit = H * 0.40;
+  ctx.beginPath();
+  for(var k = 0; k < N; k++){
+    var px = k / (N - 1) * W;
+    var py = mid - data[k] * unit;
+    if(k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.lineJoin = 'round';
+  ctx.lineCap  = 'round';
+
+  ctx.strokeStyle = WAVE_GLOW;
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  ctx.strokeStyle = WAVE_MAIN;
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+
+  // 事件标注虚线
+  var evX = center / (N - 1) * W;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(196,124,12,.65)';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(evX, 18);
+  ctx.lineTo(evX, H - 18);
+  ctx.stroke();
+  ctx.restore();
+
+  // 标注文字
+  ctx.fillStyle = '#a8680a';
+  ctx.font = '700 12.5px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('◀ 这里可能藏着一次微震', evX + 12, 36);
+
+  // 角标
+  ctx.fillStyle = '#a8c4cb';
+  ctx.font = '12px ui-monospace, Menlo, Consolas, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('STA-07 · BHZ · 100 Hz', 16, 24);
+  ctx.textAlign = 'right';
+  ctx.fillText('示例记录', W - 16, H - 14);
+  ctx.textAlign = 'left';
+}
+
+/* ==================================================================
+   7. 实验流程
+   ================================================================== */
+
+function startGame(){
+  if(G && G.timer) clearTimeout(G.timer);
+
+  var n    = cfg.trials;
+  var nSig = Math.round(n / 2);
+  var list = [];
+
+  for(var i = 0; i < n; i++) list.push(i < nSig);
+
+  for(var j = list.length - 1; j > 0; j--){
+    var k = Math.floor(Math.random() * (j + 1));
+    var t = list[j]; list[j] = list[k]; list[k] = t;
+  }
+
+  G = {
+    running:   true,
+    phase:     'idle',
+    idx:       0,
+    trials:    n,
+    list:      list,
+    sig:       false,
+    sysDp:     cfg.dp,
+    hits: 0, misses: 0, fas: 0, crs: 0,
+    responded: false,
+    timer:     null
+  };
+
+  view = setupCanvas($('seismo'), 900, 430);
+
+  $('gHit').textContent = '0';
+  $('gFA').textContent  = '0';
+  updateHUD();
+
+  go('game');
+  setTimeout(nextTrial, 420);
+}
+
+function updateHUD(){
+  $('gTrial').textContent = Math.min(G.idx, G.trials) + ' / ' + G.trials;
+  $('gHit').textContent   = G.hits;
+  $('gFA').textContent    = G.fas;
+}
+
+function nextTrial(){
+  if(!G || !G.running) return;
+
+  if(G.idx >= G.trials){ finishGame(); return; }
+
+  var sig = G.list[G.idx];
+  G.sig = sig;
+  G.idx++;
+  G.responded = false;
+  G.phase = 'stim';
+
+  updateHUD();
+
+  var fb = $('feedback');
+  fb.textContent = '';
+  fb.className = 'feedback';
+
+  $('answerBar').classList.remove('on');
+  $('scopeMask').classList.remove('on');
+
+  drawWave(makeWave(sig, G.sysDp));
+
+  G.timer = setTimeout(function(){
+    if(!G || !G.running) return;
+    G.phase = 'resp';
+    $('scopeMask').classList.add('on');
+    $('answerBar').classList.add('on');
+  }, 1900);
+}
+
+function respond(saidSignal){
+  if(!G || G.phase !== 'resp' || G.responded) return;
+
+  G.responded = true;
+  $('answerBar').classList.remove('on');
+
+  var fb = $('feedback');
+  var truth = G.sig;
+
+  if(truth && saidSignal){
+    G.hits++;
+    fb.className = 'feedback ok';
+    fb.textContent = '✓ 击中 —— 你捕捉到了这次微震';
+  }else if(truth && !saidSignal){
+    G.misses++;
+    fb.className = 'feedback bad';
+    fb.textContent = '✗ 漏报 —— 微震确实存在';
+  }else if(!truth && saidSignal){
+    G.fas++;
+    fb.className = 'feedback warn';
+    fb.textContent = '⚠ 虚报 —— 那只是背景噪声';
+  }else{
+    G.crs++;
+    fb.className = 'feedback ok';
+    fb.textContent = '✓ 正确拒斥';
+  }
+
+  updateHUD();
+
+  G.timer = setTimeout(nextTrial, 950);
+}
+
+function finishGame(){
+  if(!G) return;
+  G.running = false;
+  G.phase = 'done';
+
+  var nSig   = G.hits + G.misses;
+  var nNoise = G.fas + G.crs;
+
+  var pH  = nSig   ? G.hits / nSig    : 0;
+  var pFA = nNoise ? G.fas  / nNoise  : 0;
+
+  var pHz  = (G.hits + 0.5) / (nSig + 1);
+  var pFAz = (G.fas  + 0.5) / (nNoise + 1);
+
+  var zH = invN(pHz);
+  var zF = invN(pFAz);
+
+  var dprime = zH - zF;
+  var cVal   = -(zH + zF) / 2;
+  var acc    = (G.hits + G.crs) / G.trials;
+
+  var rec = {
+    ts:     Date.now(),
+    sysDp:  G.sysDp,
+    trials: G.trials,
+    hits:   G.hits,
+    misses: G.misses,
+    fas:    G.fas,
+    crs:    G.crs,
+    pH:     pH,
+    pFA:    pFA,
+    dp:     dprime,
+    c:      cVal,
+    acc:    acc
+  };
+
+  saveRecord(rec);
+  renderResult(rec);
+  go('result');
+}
+
+/* ==================================================================
+   8. 结果渲染
+   ================================================================== */
+
+function dpVerdict(d){
+  if(d < 0.5)  return '信号分布与噪声分布几乎完全重叠，微震在你的知觉里和背景噪声没有区别，判断接近随机。';
+  if(d < 1.2)  return '两个分布开始分离，但重叠区域仍然很大，你只能凭一点模糊的感觉去猜。';
+  if(d < 2.2)  return '信号与噪声的分布已明显分开，你能较稳定地把微震从背景里辨认出来。';
+  return '两个分布分得很开，微震在你的知觉里相当清晰——辨别力优秀。';
+}
+
+function cVerdict(c){
+  if(c >  0.35) return '你的决策门槛压在信号分布很靠右的位置：证据必须非常确凿才肯说「有」，漏报因此偏多。';
+  if(c >  0.10) return '门槛略微偏右，你倾向于谨慎，宁愿漏报也不愿虚报。';
+  if(c < -0.35) return '门槛压得很靠左，稍有风吹草动就报警，虚报因此偏多。';
+  if(c < -0.10) return '门槛略微偏左，你倾向于宽松，宁可虚报也不愿漏报。';
+  return '门槛几乎压在中性点上，既不刻意保守，也不刻意激进。';
+}
+
+function pct(v){ return (v * 100).toFixed(0) + '%'; }
+
+function renderResult(r){
+  $('resSub').textContent = '共 ' + r.trials + ' 次判断 · 系统信号强度 d′ = ' + r.sysDp.toFixed(1)
+                          + ' · 信号与噪声各占一半';
+
+  var nSig   = r.hits + r.misses;
+  var nNoise = r.fas + r.crs;
+
+  // 2×2 矩阵
+  $('mH').textContent  = r.hits;
+  $('mM').textContent  = r.misses;
+  $('mFA').textContent = r.fas;
+  $('mCR').textContent = r.crs;
+
+  $('kPH').textContent  = nSig   ? pct(r.pH)                    : '—';
+  $('kPM').textContent  = nSig   ? pct(r.misses / nSig)         : '—';
+  $('kPFA').textContent = nNoise ? pct(r.pFA)                   : '—';
+  $('kPCR').textContent = nNoise ? pct(r.crs / nNoise)          : '—';
+  $('kAcc').textContent = pct(r.acc);
+
+  // Z 分数
+  var pHz  = (r.hits + 0.5) / (nSig + 1);
+  var pFAz = (r.fas  + 0.5) / (nNoise + 1);
+  var zH = invN(pHz);
+  var zF = invN(pFAz);
+
+  $('kZH').textContent = (zH >= 0 ? '+' : '') + zH.toFixed(2);
+  $('kZF').textContent = (zF >= 0 ? '+' : '') + zF.toFixed(2);
+
+  // 两个核心指标
+  $('kDP').textContent = r.dp.toFixed(2);
+  $('kC').textContent  = (r.c >= 0 ? '+' : '') + r.c.toFixed(2);
+
+  $('dpRead').textContent = dpVerdict(r.dp);
+  $('cRead').textContent  = cVerdict(r.c);
+
+  // 对比卡片
+  $('yPH').textContent  = nSig   ? r.pH.toFixed(2)  : '—';
+  $('yPFA').textContent = nNoise ? r.pFA.toFixed(2) : '—';
+  $('yDP').textContent  = r.dp.toFixed(2);
+  $('yC').textContent   = (r.c >= 0 ? '+' : '') + r.c.toFixed(2);
+  $('yAcc').textContent = pct(r.acc);
+
+  drawROC(r);
+}
+
+/* ==================================================================
+   9. ROC 绘制
+   ================================================================== */
+
+function drawROC(r){
+  var v = setupCanvas($('rocCanvas'), 720, 560);
+  var ctx = v.ctx, W = v.W, H = v.H;
+
+  var pad = { l: 70, r: 40, t: 30, b: 66 };
+  var pw = W - pad.l - pad.r;
+  var ph = H - pad.t - pad.b;
+
+  function X(p){ return pad.l + p * pw; }
+  function Y(p){ return pad.t + (1 - p) * ph; }
+
+  ctx.clearRect(0, 0, W, H);
+
+  // 网格
+  ctx.strokeStyle = '#eaf5f8';
+  ctx.lineWidth = 1;
+  for(var i = 1; i < 10; i++){
+    var gx = Math.round(X(i/10)) + .5;
+    ctx.beginPath(); ctx.moveTo(gx, pad.t); ctx.lineTo(gx, pad.t + ph); ctx.stroke();
+    var gy = Math.round(Y(i/10)) + .5;
+    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(pad.l + pw, gy); ctx.stroke();
+  }
+
+  // 坐标轴
+  ctx.strokeStyle = '#b9dde4';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t);
+  ctx.lineTo(pad.l, pad.t + ph);
+  ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  // 刻度
+  ctx.fillStyle = '#83a1a9';
+  ctx.font = '12px ui-monospace, Menlo, Consolas, monospace';
+  ctx.textAlign = 'center';
+  for(var t = 0; t <= 10; t += 2){
+    ctx.fillText((t/10).toFixed(1), X(t/10), pad.t + ph + 22);
+  }
+  ctx.textAlign = 'right';
+  for(var u = 0; u <= 10; u += 2){
+    ctx.fillText((u/10).toFixed(1), pad.l - 12, Y(u/10) + 4);
+  }
+
+  // 轴标题
+  ctx.fillStyle = '#41646e';
+  ctx.font = '700 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('虚报率 P(FA) →', pad.l + pw/2, H - 20);
+  ctx.save();
+  ctx.translate(22, pad.t + ph/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('击中率 P(H) →', 0, 0);
+  ctx.restore();
+
+  // 随机线
+  ctx.strokeStyle = '#c8dfe4';
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(X(0), Y(0));
+  ctx.lineTo(X(1), Y(1));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 参考 ROC 曲线
+  var refDp = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0];
+  refDp.forEach(function(d){
+    ctx.beginPath();
+    var started = false;
+    for(var cc = -3.2; cc <= 3.2; cc += 0.05){
+      var xc  = d/2 + cc;
+      var pfa = 1 - ncdf(xc);
+      var phh = 1 - ncdf(xc - d);
+      var px = X(pfa), py = Y(phh);
+      if(!started){ ctx.moveTo(px, py); started = true; }
+      else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = 'rgba(14,138,158,.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+
+  // 与玩家 d' 相同的等辨别力曲线
+  ctx.beginPath();
+  var started2 = false;
+  for(var c2 = -3.2; c2 <= 3.2; c2 += 0.05){
+    var xc2  = r.dp/2 + c2;
+    var pfa2 = 1 - ncdf(xc2);
+    var ph2  = 1 - ncdf(xc2 - r.dp);
+    var px2 = X(pfa2), py2 = Y(ph2);
+    if(!started2){ ctx.moveTo(px2, py2); started2 = true; }
+    else ctx.lineTo(px2, py2);
+  }
+  ctx.strokeStyle = '#c47c0c';
+  ctx.lineWidth = 2.4;
+  ctx.stroke();
+
+  // 玩家数据点
+  var dotX = X(clamp(r.pFA, 0, 1));
+  var dotY = Y(clamp(r.pH, 0, 1));
+
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, 15, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(196,124,12,.15)';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(dotX, dotY, 6.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#c47c0c';
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // 标签
+  ctx.fillStyle = '#9c6109';
+  ctx.font = '700 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  var lx = dotX + 16;
+  var ly = dotY - 12;
+  if(lx > W - 150) lx = dotX - 132;
+  if(ly < pad.t + 14) ly = dotY + 26;
+  ctx.textAlign = 'left';
+  ctx.fillText('你  d′ = ' + r.dp.toFixed(2), lx, ly);
+}
+
+/* ==================================================================
+   10. 本地记录
+   ================================================================== */
+
+function loadRecords(){
+  try{
+    var raw = localStorage.getItem(REC_KEY);
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function saveRecord(rec){
+  try{
+    var arr = loadRecords();
+    arr.push(rec);
+    if(arr.length > 200) arr = arr.slice(-200);
+    localStorage.setItem(REC_KEY, JSON.stringify(arr));
+  }catch(e){ /* 隐私模式或空间不足，静默失败 */ }
+}
+
+function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+
+function fmtTime(ts){
+  var d = new Date(ts);
+  return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate())
+       + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+function renderRecords(){
+  var arr = loadRecords();
+
+  var empty = $('recEmpty');
+  var wrap  = $('recWrap');
+
+  if(!arr.length){
+    empty.style.display = 'block';
+    wrap.style.display  = 'none';
+    drawTrend([]);
+    return;
+  }
+
+  empty.style.display = 'none';
+  wrap.style.display  = 'block';
+
+  var rows = arr.slice().reverse().map(function(r){
+    var cCls = r.c >= 0 ? 'pos' : 'neg';
+    return '<tr>'
+      + '<td>' + fmtTime(r.ts) + '</td>'
+      + '<td>' + r.sysDp.toFixed(1) + '</td>'
+      + '<td>' + r.trials + '</td>'
+      + '<td>' + (r.pH  * 100).toFixed(0) + '%</td>'
+      + '<td>' + (r.pFA * 100).toFixed(0) + '%</td>'
+      + '<td class="hi">' + r.dp.toFixed(2) + '</td>'
+      + '<td class="' + cCls + '">' + (r.c >= 0 ? '+' : '') + r.c.toFixed(2) + '</td>'
+      + '<td>' + (r.acc * 100).toFixed(0) + '%</td>'
+      + '</tr>';
+  }).join('');
+
+  $('recBody').innerHTML = rows;
+
+  drawTrend(arr);
+}
+
+function drawTrend(arr){
+  var v = setupCanvas($('trendCanvas'), 800, 260);
+  var ctx = v.ctx, W = v.W, H = v.H;
+
+  ctx.clearRect(0, 0, W, H);
+
+  var pad = { l: 56, r: 24, t: 24, b: 42 };
+  var pw = W - pad.l - pad.r;
+  var ph = H - pad.t - pad.b;
+
+  if(!arr.length){
+    ctx.fillStyle = '#a8c4cb';
+    ctx.font = '13px -apple-system, "PingFang SC", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('暂无数据', W/2, H/2);
+    return;
+  }
+
+  var vals = arr.map(function(r){ return r.dp; });
+  var maxV = Math.max(4, Math.ceil(Math.max.apply(null, vals) * 10) / 10 + 0.3);
+  var minV = 0;
+
+  function X(i){
+    return arr.length === 1 ? pad.l + pw/2 : pad.l + (i / (arr.length - 1)) * pw;
+  }
+  function Y(val){
+    return pad.t + (1 - (val - minV) / (maxV - minV)) * ph;
+  }
+
+  // 网格
+  ctx.strokeStyle = '#eaf5f8';
+  ctx.lineWidth = 1;
+  for(var i = 0; i <= 4; i++){
+    var gy = Math.round(Y(minV + (maxV - minV) * i / 4)) + .5;
+    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(pad.l + pw, gy); ctx.stroke();
+  }
+
+  // 坐标轴
+  ctx.strokeStyle = '#b9dde4';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t);
+  ctx.lineTo(pad.l, pad.t + ph);
+  ctx.lineTo(pad.l + pw, pad.t + ph);
+  ctx.stroke();
+
+  // y 轴刻度
+  ctx.fillStyle = '#83a1a9';
+  ctx.font = '11px ui-monospace, Menlo, Consolas, monospace';
+  ctx.textAlign = 'right';
+  for(var j = 0; j <= 4; j++){
+    var val = minV + (maxV - minV) * j / 4;
+    ctx.fillText(val.toFixed(1), pad.l - 10, Y(val) + 4);
+  }
+
+  // 面积
+  ctx.beginPath();
+  ctx.moveTo(X(0), Y(0));
+  arr.forEach(function(r, k){ ctx.lineTo(X(k), Y(r.dp)); });
+  ctx.lineTo(X(arr.length - 1), Y(0));
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(14,138,158,.10)';
+  ctx.fill();
+
+  // 折线
+  ctx.beginPath();
+  arr.forEach(function(r, k){
+    var px = X(k), py = Y(r.dp);
+    if(k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  });
+  ctx.strokeStyle = '#0e8a9e';
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // 数据点
+  arr.forEach(function(r, k){
+    ctx.beginPath();
+    ctx.arc(X(k), Y(r.dp), 3.8, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#0e8a9e';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+  });
+
+  // x 轴标题
+  ctx.fillStyle = '#83a1a9';
+  ctx.font = '12px -apple-system, "PingFang SC", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('第几次实验 →', pad.l + pw/2, H - 14);
+}
+
+/* ==================================================================
+   11. 视图切换
+   ================================================================== */
+
+function go(name){
+  if(G && G.running && name !== 'game') return;
+
+  document.querySelectorAll('.view').forEach(function(v){
+    v.classList.toggle('active', v.id === 'view-' + name);
+  });
+
+  document.querySelectorAll('.navbtn').forEach(function(b){
+    var target = b.dataset.view;
+    var on = (target === name) || (target === 'home' && name !== 'records');
+    b.classList.toggle('active', on);
+  });
+
+  window.scrollTo(0, 0);
+
+  if(name === 'records')  renderRecords();
+  if(name === 'tutorial') drawTutorialWave();
+}
+
+/* ==================================================================
+   12. 初始化
+   ================================================================== */
+
+function init(){
+
+  document.querySelectorAll('.navbtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      if(G && G.running) return;
+      go(b.dataset.view);
+    });
+  });
+
+  // 难度滑块
+  var dpEl = $('setupDp');
+  dpEl.addEventListener('input', function(){
+    cfg.dp = parseFloat(this.value);
+    $('setupDpVal').textContent = cfg.dp.toFixed(2);
+  });
+
+  // 试次数
+  document.querySelectorAll('#setupTrials button').forEach(function(b){
+    b.addEventListener('click', function(){
+      document.querySelectorAll('#setupTrials button').forEach(function(x){
+        x.classList.remove('active');
+      });
+      this.classList.add('active');
+      cfg.trials = parseInt(this.dataset.n, 10);
+      $('setupTrialsVal').textContent = cfg.trials;
+    });
+  });
+
+  // 首页 → 教程
+  $('btnStart').addEventListener('click', function(){ go('tutorial'); });
+
+  // 教程页按钮
+  $('btnTutBack').addEventListener('click', function(){ go('home'); });
+  $('btnTutGo').addEventListener('click', startGame);
+
+  // 作答
+  $('btnYes').addEventListener('click', function(){ respond(true);  });
+  $('btnNo').addEventListener('click',  function(){ respond(false); });
+
+  // 结果页按钮
+  $('btnAgain').addEventListener('click', startGame);
+  $('btnHome').addEventListener('click', function(){ go('home'); });
+  $('btnRecords').addEventListener('click', function(){ go('records'); });
+
+  // 清空记录
+  $('btnClear').addEventListener('click', function(){
+    if(confirm('确定清空全部本地记录？此操作不可撤销。')){
+      try{ localStorage.removeItem(REC_KEY); }catch(e){}
+      renderRecords();
+    }
+  });
+
+  // 键盘快捷键
+  document.addEventListener('keydown', function(e){
+    if(!G || G.phase !== 'resp') return;
+    var k = e.key;
+    if(k === '1' || k === 'ArrowLeft'  || k === 'a' || k === 'A'){ respond(true);  }
+    if(k === '2' || k === 'ArrowRight' || k === 'd' || k === 'D'){ respond(false); }
+  });
+
+  // 窗口变化时重绘教程波形
+  var resizeTimer = null;
+  window.addEventListener('resize', function(){
+    if(resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function(){
+      var tv = $('view-tutorial');
+      if(tv && tv.classList.contains('active')) drawTutorialWave();
+    }, 180);
+  });
+
+  // 初始值
+  $('setupDpVal').textContent     = cfg.dp.toFixed(2);
+  $('setupTrialsVal').textContent = cfg.trials;
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', init);
+}else{
+  init();
+}
+
+})();
+</script>
+
+</body>
+</html>
